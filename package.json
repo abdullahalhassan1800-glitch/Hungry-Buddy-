@@ -1,0 +1,8 @@
+{
+  "name": "hungry-buddy-cloud-kitchen",
+  "version": "1.0.0",
+  "description": "Hungry Buddy - The Cloud Kitchen ordering website",
+  "main": "server.js",
+  "scripts": {"start": "node server.js"},
+  "dependencies": {"better-sqlite3": "^11.7.0", "express": "^4.21.2"}
+}
