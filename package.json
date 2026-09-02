@@ -1,8 +1,15 @@
 {
   "name": "hungry-buddy-cloud-kitchen",
   "version": "1.0.0",
-  "description": "Hungry Buddy - The Cloud Kitchen ordering website",
+  "private": true,
+  "description": "Full-stack ordering website and admin panel for Hungry Buddy - The Cloud Kitchen.",
   "main": "server.js",
-  "scripts": {"start": "node server.js"},
-  "dependencies": {"better-sqlite3": "^11.7.0", "express": "^4.21.2"}
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "dependencies": {
+    "better-sqlite3": "^11.8.1",
+    "express": "^5.1.0"
+  }
 }
