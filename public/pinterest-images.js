@@ -1,6 +1,8 @@
 (() => {
   const originalFetch = window.fetch.bind(window);
-  const pin = p => `https://i.pinimg.com/736x/${p}.jpg`;
+  // Use Pinterest CDN URLs that were verified from Pinterest pin pages.
+  // Keep them at 236px so the CDN path is stable; CSS scales them cleanly in cards.
+  const pin = p => `https://i.pinimg.com/236x/${p}.jpg`;
   const pinterestPhotos = {
     burger: pin('46/3b/06/463b063a9b49ab64371bcb56893dc145'),
     food: pin('60/8e/a9/608ea9105ce38e4a7fa87cea58509434'),
@@ -31,7 +33,7 @@
       return new Response(JSON.stringify(data), {
         status: response.status,
         statusText: response.statusText,
-        headers: {'Content-Type': 'application/json'}
+        headers: {'Content-Type': 'application/json', 'Cache-Control': 'no-store'}
       });
     } catch (_) { return response; }
   };
