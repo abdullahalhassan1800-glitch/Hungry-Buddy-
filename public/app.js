@@ -1,13 +1,24 @@
 const state={menu:[],cart:JSON.parse(localStorage.getItem('hb_cart')||'[]'),category:'All',adminToken:localStorage.getItem('hb_admin')||''};
 const $=s=>document.querySelector(s), $$=s=>document.querySelectorAll(s);
 const money=n=>`₹${Number(n).toLocaleString('en-IN')}`;
-const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));
-const imgFor=m=>m.image||({Breakfast:'/assets/menu-1.svg',Drinks:'/assets/menu-2.svg',Momos:'/assets/menu-2.svg','Rice & Noodles':'/assets/menu-1.svg','Rice Platters':'/assets/menu-1.svg','Noodles Platters':'/assets/menu-1.svg','Large Combos':'/assets/menu-3.svg','Mini Combos':'/assets/menu-3.svg','Main Course':'/assets/menu-2.svg'}[m.category]||'/assets/menu-3.svg');
+const esc=s=>String(s??'').replace(/[&<>\"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#039;'}[c]));
+const foodPhotos={
+ burger:'https://images.unsplash.com/photo-1586816001966-79b736744398?auto=format&fit=crop&w=900&q=85',
+ sandwich:'https://images.unsplash.com/photo-1662967551570-fcdbcc5840c3?auto=format&fit=crop&w=900&q=85',
+ maggi:'https://wbcdn.in/assets/img/uploads/cache/wbos-tree-test/2021/sep/img_36bb3aa29d23b34c12c26461075eb753e829b809_870_.jpg',
+ noodles:'https://images.unsplash.com/photo-1612929633738-8fe44f7ec841?auto=format&fit=crop&w=900&q=85',
+ momo:'https://storage.googleapis.com/wfc-production/ec308e2e-934c-4749-8483-9634090ca3a6.jpeg',
+ pizza:'https://images.unsplash.com/photo-1695606392964-008c4bbdf354?auto=format&fit=crop&w=900&q=85',
+ chicken:'https://images.unsplash.com/photo-1771252399544-43dc3d11a21b?auto=format&fit=crop&w=900&q=85',
+ rice:'https://images.unsplash.com/photo-1512058564366-18510be2db19?auto=format&fit=crop&w=900&q=85',
+ drink:'https://images.unsplash.com/photo-1563101730-5ace2fd8e7d7?auto=format&fit=crop&w=900&q=85'
+};
+const imgFor=m=>{if(m.image)return m.image;const s=`${m.name||''} ${m.category||''}`.toLowerCase();if(/burger/.test(s))return foodPhotos.burger;if(/sandwich/.test(s))return foodPhotos.sandwich;if(/maggi/.test(s))return foodPhotos.maggi;if(/noodle/.test(s))return foodPhotos.noodles;if(/momo|dumpling/.test(s))return foodPhotos.momo;if(/pizza/.test(s))return foodPhotos.pizza;if(/chicken/.test(s))return foodPhotos.chicken;if(/rice|biryani|pulao/.test(s))return foodPhotos.rice;if(/coke|drink|beverage|mojito|juice/.test(s))return foodPhotos.drink;return foodPhotos.sandwich;};
 function persist(){localStorage.setItem('hb_cart',JSON.stringify(state.cart));}
 async function loadMenu(){const r=await fetch('/api/menu');state.menu=await r.json();renderFilters();renderMenu();renderCart();}
 function renderFilters(){const cats=['All',...new Set(state.menu.map(x=>x.category))];$('#filters').innerHTML=cats.map(c=>`<button class="filter ${c===state.category?'active':''}" onclick="setCategory('${esc(c)}')">${esc(c)}</button>`).join('');}
 window.setCategory=c=>{state.category=c;renderFilters();renderMenu();};
-function renderMenu(){const rows=state.menu.filter(x=>state.category==='All'||x.category===state.category);$('#menuGrid').innerHTML=rows.map(x=>`<article class="menu-card"><div class="food-wrap"><img class="food-img" src="${imgFor(x)}" alt="${esc(x.name)}" loading="lazy"></div><div class="tag">${esc(x.category)}</div><h3>${esc(x.name)}</h3><p>${esc(x.description||'Freshly prepared by Hungry Buddy.')}</p><div class="price-row"><span class="price">${money(x.price)}</span><span class="veg ${x.veg?'':'nonveg'}">${x.veg?'VEG':'NON-VEG'}</span><button class="add" onclick="addToCart(${x.id})">🛒 ADD TO CART</button></div></article>`).join('')||'<div class="loading">No items in this category.</div>';}
+function renderMenu(){const rows=state.menu.filter(x=>state.category==='All'||x.category===state.category);$('#menuGrid').innerHTML=rows.map(x=>`<article class="menu-card"><div class="food-wrap"><img class="food-img" src="${imgFor(x)}" alt="${esc(x.name)}" loading="lazy" referrerpolicy="no-referrer" onerror="this.src='${foodPhotos.sandwich}'"></div><div class="tag">${esc(x.category)}</div><h3>${esc(x.name)}</h3><p>${esc(x.description||'Freshly prepared by Hungry Buddy.')}</p><div class="price-row"><span class="price">${money(x.price)}</span><span class="veg ${x.veg?'':'nonveg'}">${x.veg?'VEG':'NON-VEG'}</span><button class="add" onclick="addToCart(${x.id})">🛒 ADD TO CART</button></div></article>`).join('')||'<div class="loading">No items in this category.</div>';}
 window.addToCart=id=>{const m=state.menu.find(x=>x.id===id);if(!m)return;const line=state.cart.find(x=>x.id===id);line?line.qty++:state.cart.push({id,qty:1});persist();renderCart();openCart();};
 window.changeQty=(id,d)=>{const x=state.cart.find(i=>i.id===id);if(!x)return;x.qty+=d;if(x.qty<=0)state.cart=state.cart.filter(i=>i.id!==id);persist();renderCart();};
 function totals(){let subtotal=0;state.cart.forEach(i=>{const m=state.menu.find(x=>x.id===i.id);if(m)subtotal+=m.price*i.qty});const delivery=subtotal>=199?0:(subtotal?30:0);return{subtotal,delivery,total:subtotal+delivery};}
