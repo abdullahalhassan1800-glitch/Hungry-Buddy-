@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Hungry Buddy — The Cloud Kitchen</title>
+  <meta name="description" content="Order fresh food from Hungry Buddy Cloud Kitchen, Asansol | Burnpur.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Oswald:wght@500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<header class="topbar">
+  <a class="brand" href="#"><span class="brand-mark">HB</span><span><b>HUNGRY BUDDY</b><small>The Cloud Kitchen</small></span></a>
+  <nav><a href="#menu">Menu</a><a href="#how">How it works</a><a href="#contact">Contact</a><button class="cart-btn" id="cartBtn">Cart <span id="cartCount">0</span></button><button class="admin-link" id="adminOpen">Admin</button></nav>
+</header>
+
+<main>
+<section class="hero">
+  <div class="hero-copy">
+    <p class="eyebrow">ASANSOL • BURNPUR</p>
+    <h1>Good food.<br><em>Hungry Buddy.</em></h1>
+    <p class="lead">Fresh combos, momos, rice, noodles and more — delivered from our cloud kitchen to your doorstep.</p>
+    <div class="hero-actions"><a href="#menu" class="primary">Order now</a><a href="tel:7003371476" class="secondary">Call 7003371476</a></div>
+    <div class="trust"><span>✓ COD available</span><span>✓ Free delivery ₹199+</span><span>✓ ₹30 delivery below ₹199</span></div>
+  </div>
+  <div class="hero-art">
+    <div class="poster-stack"><img src="/assets/menu-1.jpg" alt="Hungry Buddy menu"><img src="/assets/menu-2.jpg" alt="Hungry Buddy menu"></div>
+    <div class="floating">🔥 <b>Hungry?</b><br>Let's fix that.</div>
+  </div>
+</section>
+
+<section class="strip" id="how"><div><b>1</b><span>Choose your favourites</span></div><div><b>2</b><span>Enter delivery details</span></div><div><b>3</b><span>We prepare & deliver</span></div></section>
+
+<section class="menu-section" id="menu">
+  <div class="section-head"><div><p class="eyebrow">OUR MENU</p><h2>What are you craving?</h2></div><div class="filters" id="filters"></div></div>
+  <div id="menuGrid" class="menu-grid"><div class="loading">Loading menu…</div></div>
+</section>
+
+<section class="gallery"><img src="/assets/menu-3.jpg" alt="Large combos menu"><div><p class="eyebrow">BIG HUNGER?</p><h2>Combo it up.</h2><p>Save time choosing with our large and mini combos, packed for a proper meal.</p><a href="#menu" class="primary">Explore combos</a></div></section>
+
+<section class="contact" id="contact">
+  <div><p class="eyebrow">HUNGRY BUDDY</p><h2>Order directly with us.</h2><p>Asansol • Burnpur<br>Offline orders: <a href="tel:7003371476">7003371476</a></p></div>
+  <div class="contact-card"><b>Delivery policy</b><span>₹30 delivery charge per order</span><span>Free delivery on orders ₹199 and above</span><span>Available on Zomato & Swiggy</span></div>
+</section>
+</main>
+
+<footer>© 2026 Hungry Buddy — The Cloud Kitchen <span>•</span> Asansol | Burnpur</footer>
+
+<div class="drawer-backdrop" id="backdrop"></div>
+<aside class="cart-drawer" id="cartDrawer">
+  <div class="drawer-head"><h3>Your cart</h3><button class="icon-btn" id="closeCart">×</button></div>
+  <div id="cartItems" class="cart-items"></div>
+  <div class="cart-summary" id="cartSummary"></div>
+  <button class="primary full" id="checkoutBtn">Checkout</button>
+</aside>
+
+<div class="modal" id="checkoutModal"><div class="modal-card">
+  <div class="drawer-head"><h3>Complete your order</h3><button class="icon-btn" data-close>×</button></div>
+  <form id="checkoutForm">
+    <label>Name<input name="customer_name" required placeholder="Your name"></label>
+    <label>Phone<input name="phone" required inputmode="tel" placeholder="10-digit mobile number"></label>
+    <label>Delivery address<textarea name="address" required placeholder="House / flat, street, area, Asansol / Burnpur"></textarea></label>
+    <label>Notes (optional)<textarea name="notes" placeholder="Less spicy, landmark, etc."></textarea></label>
+    <label>Payment<select name="payment_method"><option value="COD">Cash on Delivery</option><option value="UPI">UPI on delivery</option></select></label>
+    <div id="checkoutTotal" class="checkout-total"></div>
+    <button class="primary full" type="submit">Place order</button>
+  </form>
+  <div id="orderSuccess" class="success hidden"></div>
+</div></div>
+
+<div class="modal" id="adminModal"><div class="modal-card admin-modal">
+  <div class="drawer-head"><h3>Admin dashboard</h3><button class="icon-btn" data-close>×</button></div>
+  <div id="adminLogin">
+    <p class="muted">Manage menu, availability and incoming orders.</p>
+    <form id="loginForm"><label>Admin password<input type="password" name="password" required placeholder="Enter password"></label><button class="primary full">Login</button></form>
+  </div>
+  <div id="adminApp" class="hidden">
+    <div class="admin-tabs"><button class="active" data-tab="orders">Orders</button><button data-tab="menuAdmin">Menu</button></div>
+    <section id="ordersTab"><div class="stats" id="stats"></div><div class="orders" id="orders"></div></section>
+    <section id="menuAdminTab" class="hidden"><div class="admin-actions"><button class="primary" id="addMenu">+ Add item</button></div><div id="menuAdmin"></div></section>
+  </div>
+</div></div>
+
+<div class="modal" id="menuEditModal"><div class="modal-card">
+  <div class="drawer-head"><h3 id="editTitle">Add menu item</h3><button class="icon-btn" data-close>×</button></div>
+  <form id="menuForm">
+    <input type="hidden" name="id">
+    <label>Item name<input name="name" required></label>
+    <label>Category<input name="category" required placeholder="e.g. Momos"></label>
+    <label>Description<textarea name="description"></textarea></label>
+    <div class="two"><label>Price (₹)<input name="price" type="number" min="0" required></label><label>Veg?<select name="veg"><option value="1">Yes</option><option value="0">No / Egg / Chicken</option></select></label></div>
+    <label>Available?<select name="available"><option value="1">Available</option><option value="0">Hidden</option></select></label>
+    <button class="primary full">Save item</button>
+  </form>
+</div></div>
+
+<script src="/app.js"></script>
+</body>
+</html>
