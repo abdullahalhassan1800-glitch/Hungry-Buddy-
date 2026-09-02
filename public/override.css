@@ -1,0 +1,20 @@
+/* Reference-style polish */
+.hero{background:linear-gradient(90deg,#090a0a 0%,#111313 52%,#090a0a 100%);box-shadow:inset 0 0 80px #000}
+.hero:before,.hero:after{content:'';position:absolute;inset:auto;pointer-events:none;z-index:0}
+.hero:before{width:180px;height:180px;left:-40px;bottom:70px;border-radius:50%;background:radial-gradient(circle,#ffc400 0 2px,transparent 3px);opacity:.12;box-shadow:80px 40px 0 #ffc400,40px -30px 0 #ffc400}
+.hero-copy{padding-left:5vw}
+.hero h1{font-weight:700;text-shadow:0 3px 0 #000}
+.hero h1 span{letter-spacing:5px}
+.hero h1 strong{-webkit-text-stroke:3px #f7f5ee;letter-spacing:2px}
+.hero-subtitle{font-size:46px;text-shadow:3px 3px #000}
+.hero-food{mix-blend-mode:normal}
+.hero-art{overflow:visible}
+.chef-mascot{width:min(560px,96%);height:510px;filter:drop-shadow(0 14px 10px #000)}
+.food-left{left:-28px;top:18px;width:165px;height:165px}.food-right{right:-22px;top:18px;width:205px;height:205px}
+.food-badge{bottom:35px;right:5%;padding:12px 22px;border:2px solid #111}
+.benefits{padding-top:20px;padding-bottom:20px}
+.menu-section{background:linear-gradient(#0a0b0bcc,#0a0b0bcc);border-top:1px solid #252625}
+.section-title h2{font-size:45px;letter-spacing:5px;text-shadow:3px 3px #000}
+.menu-card{border-color:#555;box-shadow:0 6px 0 #000,0 0 0 1px #222 inset;transition:transform .18s,border-color .18s}.menu-card:hover{transform:translateY(-4px);border-color:var(--y)}
+.add{border-radius:3px}
+@media(max-width:760px){.hero{padding-bottom:22px}.hero-copy{padding:40px 16px 8px}.hero h1 span{letter-spacing:2px}.hero-subtitle{font-size:30px}.hero-art{height:300px;min-height:300px}.chef-mascot{width:92%;height:300px}.food-badge{bottom:2px;right:8px}.benefits{margin-top:0}.section-title h2{font-size:27px;letter-spacing:2px}}
