@@ -1,107 +1,34 @@
-const state={menu:[],cart:[],category:"All",adminToken:localStorage.getItem("hb_admin")||""};
+const state={menu:[],cart:JSON.parse(localStorage.getItem('hb_cart')||'[]'),category:'All',adminToken:localStorage.getItem('hb_admin')||''};
 const $=s=>document.querySelector(s), $$=s=>document.querySelectorAll(s);
-const money=n=>`₹${Number(n).toLocaleString("en-IN")}`;
-const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c]));
-
-async function loadMenu(){
-  const r=await fetch("/api/menu"); state.menu=await r.json();
-  renderFilters(); renderMenu(); renderCart();
-}
-function renderFilters(){
-  const cats=["All",...new Set(state.menu.map(x=>x.category))];
-  $("#filters").innerHTML=cats.map(c=>`<button class="filter ${c===state.category?"active":""}" onclick="setCategory('${esc(c)}')">${esc(c)}</button>`).join("");
-}
-window.setCategory=c=>{state.category=c;renderFilters();renderMenu()};
-function renderMenu(){
-  const rows=state.menu.filter(x=>state.category==="All"||x.category===state.category);
-  $("#menuGrid").innerHTML=rows.map(x=>`
-    <article class="menu-card">
-      <div class="tag">${esc(x.category)}</div>
-      <h3>${esc(x.name)}</h3>
-      <p>${esc(x.description||"Freshly prepared by Hungry Buddy.")}</p>
-      <div class="price-row"><span class="price">${money(x.price)}</span><span class="veg ${x.veg?"":"nonveg"}">${x.veg?"VEG":"NON-VEG"}</span><button class="add" onclick="addToCart(${x.id})">+ Add</button></div>
-    </article>`).join("")||`<div class="loading">No items in this category.</div>`;
-}
-window.addToCart=id=>{
-  const m=state.menu.find(x=>x.id===id); if(!m)return;
-  const line=state.cart.find(x=>x.id===id); line?line.qty++:state.cart.push({id,qty:1});
-  renderCart(); openCart();
-};
-window.changeQty=(id,d)=>{
-  const x=state.cart.find(i=>i.id===id); if(!x)return;
-  x.qty+=d;if(x.qty<=0)state.cart=state.cart.filter(i=>i.id!==id);renderCart();
-};
-function totals(){
-  let subtotal=0;
-  state.cart.forEach(i=>{const m=state.menu.find(x=>x.id===i.id);if(m)subtotal+=m.price*i.qty});
-  const delivery=subtotal>=199?0:(subtotal?30:0);
-  return {subtotal,delivery,total:subtotal+delivery};
-}
-function renderCart(){
-  $("#cartCount").textContent=state.cart.reduce((a,x)=>a+x.qty,0);
-  $("#cartItems").innerHTML=state.cart.length?state.cart.map(i=>{const m=state.menu.find(x=>x.id===i.id);return `
-    <div class="cart-line"><div class="cart-line-top"><b>${esc(m.name)}</b><strong>${money(m.price*i.qty)}</strong></div>
-    <div class="qty"><button onclick="changeQty(${i.id},-1)">−</button><span>${i.qty}</span><button onclick="changeQty(${i.id},1)">+</button><span class="muted">${money(m.price)} each</span></div></div>`}).join(""):`<div class="loading">Your cart is empty.<br>Add something delicious.</div>`;
-  const t=totals();
-  $("#cartSummary").innerHTML=t.subtotal?`<div class="sum"><span>Subtotal</span><b>${money(t.subtotal)}</b></div><div class="sum"><span>Delivery</span><b>${t.delivery?money(t.delivery):"FREE"}</b></div><div class="sum total"><span>Total</span><b>${money(t.total)}</b></div>`:"";
-  $("#checkoutBtn").disabled=!state.cart.length;
-  $("#checkoutTotal").innerHTML=`Total payable: ${money(t.total)} ${t.delivery===0?"(free delivery)":""}`;
-}
-function openCart(){$("#cartDrawer").classList.add("open");$("#backdrop").classList.add("show")}
-function closeCart(){$("#cartDrawer").classList.remove("open");$("#backdrop").classList.remove("show")}
-$("#cartBtn").onclick=openCart;$("#closeCart").onclick=closeCart;$("#backdrop").onclick=closeCart;
-function show(id){$(id).classList.add("show")}function hide(id){$(id).classList.remove("show")}
-$$("[data-close]").forEach(b=>b.onclick=()=>b.closest(".modal").classList.remove("show"));
-$("#checkoutBtn").onclick=()=>{if(state.cart.length){closeCart();show("#checkoutModal");$("#orderSuccess").classList.add("hidden");$("#checkoutForm").classList.remove("hidden");renderCart()}};
-$("#checkoutForm").onsubmit=async e=>{
-  e.preventDefault();
-  const fd=new FormData(e.target), payload=Object.fromEntries(fd.entries());
-  payload.items=state.cart.map(x=>({id:x.id,qty:x.qty}));
-  const r=await fetch("/api/orders",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)});
-  const data=await r.json();
-  if(!r.ok)return alert(data.error||"Could not place order");
-  state.cart=[];renderCart();
-  $("#checkoutForm").classList.add("hidden");
-  $("#orderSuccess").classList.remove("hidden");
-  $("#orderSuccess").innerHTML=`<b>Order #${data.orderId} received 🎉</b><br>Total: ${money(data.total)}<br>Delivery: ${data.delivery_charge?money(data.delivery_charge):"FREE"}<br><br>We’ll call ${esc(payload.phone)} to confirm your order.`;
-};
-
-$("#adminOpen").onclick=()=>{show("#adminModal");if(state.adminToken)loadAdmin()};
-$("#loginForm").onsubmit=async e=>{
-  e.preventDefault();const fd=new FormData(e.target);
-  const r=await fetch("/api/admin/login",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({password:fd.get("password")})});
-  const d=await r.json();if(!r.ok)return alert(d.error);
-  state.adminToken=d.token;localStorage.setItem("hb_admin",d.token);loadAdmin();
-};
-async function adminFetch(url,opts={}){
-  opts.headers={...(opts.headers||{}),Authorization:"Bearer "+state.adminToken};
-  const r=await fetch(url,opts);if(r.status===401){state.adminToken="";localStorage.removeItem("hb_admin");$("#adminApp").classList.add("hidden");$("#adminLogin").classList.remove("hidden");throw new Error("Session expired")}return r;
-}
-async function loadAdmin(){
-  $("#adminLogin").classList.add("hidden");$("#adminApp").classList.remove("hidden");
-  await Promise.all([loadStats(),loadOrders(),loadAdminMenu()]);
-}
-async function loadStats(){
-  const r=await adminFetch("/api/admin/stats"),d=await r.json();
-  $("#stats").innerHTML=`<div class="stat"><span>Today</span><b>${d.today.c}</b><small>${money(d.today.revenue)} revenue</small></div><div class="stat"><span>Pending</span><b>${d.pending.c}</b><small>active orders</small></div><div class="stat"><span>All time</span><b>${d.all.c}</b><small>${money(d.all.revenue)} revenue</small></div>`;
-}
-async function loadOrders(){
-  const r=await adminFetch("/api/admin/orders"),rows=await r.json();
-  $("#orders").innerHTML=rows.length?rows.map(o=>`<div class="order-card"><div class="order-top"><div><b>#${o.id} · ${esc(o.customer_name)}</b><div class="muted">${new Date(o.created_at).toLocaleString()}</div></div><span class="status">${esc(o.status)}</span></div><div class="order-items">${o.items.map(i=>`${i.qty}× ${esc(i.name)} — ${money(i.price*i.qty)}`).join("<br>")}</div><div><b>${money(o.total)}</b> · ${esc(o.phone)}<br><span class="muted">${esc(o.address)}</span>${o.notes?`<br><span class="muted">Note: ${esc(o.notes)}</span>`:""}</div><select onchange="updateOrder(${o.id},this.value)">${["NEW","CONFIRMED","PREPARING","OUT_FOR_DELIVERY","DELIVERED","CANCELLED"].map(s=>`<option ${s===o.status?"selected":""}>${s}</option>`).join("")}</select></div>`).join(""):`<div class="loading">No orders yet.</div>`;
-}
-window.updateOrder=async(id,status)=>{await adminFetch("/api/admin/orders/"+id,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({status})});loadOrders();loadStats()};
-async function loadAdminMenu(){
-  const r=await adminFetch("/api/admin/menu"),rows=await r.json();
-  $("#menuAdmin").innerHTML=rows.map(m=>`<div class="admin-menu-row"><b>${esc(m.name)}</b><span>${esc(m.category)}</span><span>${money(m.price)}</span><span>${m.available?"Live":"Hidden"}</span><span><button onclick='editMenu(${JSON.stringify(m)})'>Edit</button> <button class="danger" onclick="deleteMenu(${m.id})">Delete</button></span></div>`).join("");
-}
-window.editMenu=m=>{show("#menuEditModal");$("#editTitle").textContent="Edit menu item";const f=$("#menuForm");for(const k of ["id","name","category","description","price","veg","available"])f.elements[k].value=m[k]??""};
-$("#addMenu").onclick=()=>{show("#menuEditModal");$("#editTitle").textContent="Add menu item";$("#menuForm").reset();$("#menuForm").elements.id.value=""};
-$("#menuForm").onsubmit=async e=>{
-  e.preventDefault();const f=e.target;const payload=Object.fromEntries(new FormData(f).entries());payload.price=Number(payload.price);
-  const id=payload.id;delete payload.id;payload.veg=Number(payload.veg);payload.available=Number(payload.available);
-  const r=await adminFetch(id?"/api/admin/menu/"+id:"/api/admin/menu",{method:id?"PUT":"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)});
-  const d=await r.json();if(!r.ok)return alert(d.error);hide("#menuEditModal");await loadMenu();loadAdminMenu();
-};
-window.deleteMenu=async id=>{if(!confirm("Delete this menu item?"))return;await adminFetch("/api/admin/menu/"+id,{method:"DELETE"});await loadMenu();loadAdminMenu()};
-$$(".admin-tabs button").forEach(b=>b.onclick=()=>{$$(".admin-tabs button").forEach(x=>x.classList.remove("active"));b.classList.add("active");$("#ordersTab").classList.toggle("hidden",b.dataset.tab!=="orders");$("#menuAdminTab").classList.toggle("hidden",b.dataset.tab!=="menuAdmin")});
+const money=n=>`₹${Number(n).toLocaleString('en-IN')}`;
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));
+const imgFor=m=>m.image||({Breakfast:'/assets/menu-1.svg',Drinks:'/assets/menu-2.svg',Momos:'/assets/menu-2.svg','Rice & Noodles':'/assets/menu-1.svg','Rice Platters':'/assets/menu-1.svg','Noodles Platters':'/assets/menu-1.svg','Large Combos':'/assets/menu-3.svg','Mini Combos':'/assets/menu-3.svg','Main Course':'/assets/menu-2.svg'}[m.category]||'/assets/menu-3.svg');
+function persist(){localStorage.setItem('hb_cart',JSON.stringify(state.cart));}
+async function loadMenu(){const r=await fetch('/api/menu');state.menu=await r.json();renderFilters();renderMenu();renderCart();}
+function renderFilters(){const cats=['All',...new Set(state.menu.map(x=>x.category))];$('#filters').innerHTML=cats.map(c=>`<button class="filter ${c===state.category?'active':''}" onclick="setCategory('${esc(c)}')">${esc(c)}</button>`).join('');}
+window.setCategory=c=>{state.category=c;renderFilters();renderMenu();};
+function renderMenu(){const rows=state.menu.filter(x=>state.category==='All'||x.category===state.category);$('#menuGrid').innerHTML=rows.map(x=>`<article class="menu-card"><div class="food-wrap"><img class="food-img" src="${imgFor(x)}" alt="${esc(x.name)}" loading="lazy"></div><div class="tag">${esc(x.category)}</div><h3>${esc(x.name)}</h3><p>${esc(x.description||'Freshly prepared by Hungry Buddy.')}</p><div class="price-row"><span class="price">${money(x.price)}</span><span class="veg ${x.veg?'':'nonveg'}">${x.veg?'VEG':'NON-VEG'}</span><button class="add" onclick="addToCart(${x.id})">🛒 ADD TO CART</button></div></article>`).join('')||'<div class="loading">No items in this category.</div>';}
+window.addToCart=id=>{const m=state.menu.find(x=>x.id===id);if(!m)return;const line=state.cart.find(x=>x.id===id);line?line.qty++:state.cart.push({id,qty:1});persist();renderCart();openCart();};
+window.changeQty=(id,d)=>{const x=state.cart.find(i=>i.id===id);if(!x)return;x.qty+=d;if(x.qty<=0)state.cart=state.cart.filter(i=>i.id!==id);persist();renderCart();};
+function totals(){let subtotal=0;state.cart.forEach(i=>{const m=state.menu.find(x=>x.id===i.id);if(m)subtotal+=m.price*i.qty});const delivery=subtotal>=199?0:(subtotal?30:0);return{subtotal,delivery,total:subtotal+delivery};}
+function renderCart(){$('#cartCount').textContent=state.cart.reduce((a,x)=>a+x.qty,0);$('#cartItems').innerHTML=state.cart.length?state.cart.map(i=>{const m=state.menu.find(x=>x.id===i.id);return `<div class="cart-line"><div class="cart-line-top"><div><b>${esc(m.name)}</b><div class="muted">${money(m.price)} each</div></div><strong>${money(m.price*i.qty)}</strong></div><div class="qty"><button onclick="changeQty(${i.id},-1)">−</button><span>${i.qty}</span><button onclick="changeQty(${i.id},1)">+</button></div></div>`}).join(''):'<div class="loading">Your cart is empty.<br>Add something delicious.</div>';const t=totals();$('#cartSummary').innerHTML=t.subtotal?`<div class="sum"><span>Subtotal</span><b>${money(t.subtotal)}</b></div><div class="sum"><span>Delivery</span><b>${t.delivery?money(t.delivery):'FREE'}</b></div><div class="sum total"><span>Total</span><b>${money(t.total)}</b></div>`:'';$('#checkoutBtn').disabled=!state.cart.length;$('#checkoutTotal').innerHTML=`Total payable: ${money(t.total)} ${t.delivery===0?'(free delivery)':''}`;}
+function openCart(){$('#cartDrawer').classList.add('open');$('#backdrop').classList.add('show');} function closeCart(){$('#cartDrawer').classList.remove('open');$('#backdrop').classList.remove('show');}
+$('#cartBtn').onclick=openCart;$('#closeCart').onclick=closeCart;$('#backdrop').onclick=closeCart;
+function show(id){$(id).classList.add('show')}function hide(id){$(id).classList.remove('show')}
+$$('[data-close]').forEach(b=>b.onclick=()=>b.closest('.modal').classList.remove('show'));
+$('#checkoutBtn').onclick=()=>{if(state.cart.length){closeCart();show('#checkoutModal');$('#orderSuccess').classList.add('hidden');$('#checkoutForm').classList.remove('hidden');renderCart();}};
+$('#checkoutForm').onsubmit=async e=>{e.preventDefault();const fd=new FormData(e.target),payload=Object.fromEntries(fd.entries());payload.items=state.cart.map(x=>({id:x.id,qty:x.qty}));const r=await fetch('/api/orders',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});const data=await r.json();if(!r.ok)return alert(data.error||'Could not place order');state.cart=[];persist();renderCart();$('#checkoutForm').classList.add('hidden');$('#orderSuccess').classList.remove('hidden');$('#orderSuccess').innerHTML=`<b>Order #${data.orderId} received 🎉</b><br>Total: ${money(data.total)}<br>Delivery: ${data.delivery_charge?money(data.delivery_charge):'FREE'}<br><br>We'll call ${esc(payload.phone)} to confirm your order.`;};
+$('#adminOpen').onclick=()=>{show('#adminModal');if(state.adminToken)loadAdmin()};
+$('#loginForm').onsubmit=async e=>{e.preventDefault();const fd=new FormData(e.target);const r=await fetch('/api/admin/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:fd.get('password')})});const d=await r.json();if(!r.ok)return alert(d.error);state.adminToken=d.token;localStorage.setItem('hb_admin',d.token);loadAdmin();};
+async function adminFetch(url,opts={}){opts.headers={...(opts.headers||{}),Authorization:'Bearer '+state.adminToken};const r=await fetch(url,opts);if(r.status===401){state.adminToken='';localStorage.removeItem('hb_admin');$('#adminApp').classList.add('hidden');$('#adminLogin').classList.remove('hidden');throw new Error('Session expired')}return r;}
+async function loadAdmin(){$('#adminLogin').classList.add('hidden');$('#adminApp').classList.remove('hidden');await Promise.all([loadStats(),loadOrders(),loadAdminMenu()]);}
+async function loadStats(){const r=await adminFetch('/api/admin/stats'),d=await r.json();$('#stats').innerHTML=`<div class="stat"><span>Today</span><b>${d.today.c}</b><small>${money(d.today.revenue)} revenue</small></div><div class="stat"><span>Pending</span><b>${d.pending.c}</b><small>active orders</small></div><div class="stat"><span>All time</span><b>${d.all.c}</b><small>${money(d.all.revenue)} revenue</small></div>`;}
+async function loadOrders(){const r=await adminFetch('/api/admin/orders'),rows=await r.json();$('#orders').innerHTML=rows.length?rows.map(o=>`<div class="order-card"><div class="order-top"><div><b>#${o.id} · ${esc(o.customer_name)}</b><div class="muted">${new Date(o.created_at).toLocaleString()}</div></div><span class="status">${esc(o.status)}</span></div><div class="order-items">${o.items.map(i=>`${i.qty}× ${esc(i.name)} — ${money(i.price*i.qty)}`).join('<br>')}</div><div><b>${money(o.total)}</b> · ${esc(o.phone)}<br><span class="muted">${esc(o.address)}</span>${o.notes?`<br><span class="muted">Note: ${esc(o.notes)}</span>`:''}</div><select onchange="updateOrder(${o.id},this.value)">${['NEW','CONFIRMED','PREPARING','OUT_FOR_DELIVERY','DELIVERED','CANCELLED'].map(s=>`<option ${s===o.status?'selected':''}>${s}</option>`).join('')}</select></div>`).join(''):'<div class="loading">No orders yet.</div>';}
+window.updateOrder=async(id,status)=>{await adminFetch('/api/admin/orders/'+id,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({status})});loadOrders();loadStats();};
+async function loadAdminMenu(){const r=await adminFetch('/api/admin/menu'),rows=await r.json();$('#menuAdmin').innerHTML=rows.map(m=>`<div class="admin-menu-row"><b>${esc(m.name)}</b><span>${esc(m.category)}</span><span>${money(m.price)}</span><span>${m.available?'Live':'Hidden'}</span><span><button onclick='editMenu(${JSON.stringify(m)})'>Edit</button> <button class="danger" onclick="deleteMenu(${m.id})">Delete</button></span></div>`).join('');}
+window.editMenu=m=>{show('#menuEditModal');$('#editTitle').textContent='Edit menu item';const f=$('#menuForm');for(const k of ['id','name','category','description','price','veg','available','image'])if(f.elements[k])f.elements[k].value=m[k]??'';};
+$('#addMenu').onclick=()=>{show('#menuEditModal');$('#editTitle').textContent='Add menu item';$('#menuForm').reset();$('#menuForm').elements.id.value='';};
+$('#menuForm').onsubmit=async e=>{e.preventDefault();const f=e.target,payload=Object.fromEntries(new FormData(f).entries());payload.price=Number(payload.price);const id=payload.id;delete payload.id;payload.veg=Number(payload.veg);payload.available=Number(payload.available);const r=await adminFetch(id?'/api/admin/menu/'+id:'/api/admin/menu',{method:id?'PUT':'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});const d=await r.json();if(!r.ok)return alert(d.error);hide('#menuEditModal');await loadMenu();loadAdminMenu();};
+window.deleteMenu=async id=>{if(!confirm('Delete this menu item?'))return;await adminFetch('/api/admin/menu/'+id,{method:'DELETE'});await loadMenu();loadAdminMenu();};
+$$('.admin-tabs button').forEach(b=>b.onclick=()=>{$$('.admin-tabs button').forEach(x=>x.classList.remove('active'));b.classList.add('active');$('#ordersTab').classList.toggle('hidden',b.dataset.tab!=='orders');$('#menuAdminTab').classList.toggle('hidden',b.dataset.tab!=='menuAdmin');});
 loadMenu();
